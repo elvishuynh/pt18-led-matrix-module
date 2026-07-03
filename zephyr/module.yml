@@ -1,0 +1,6 @@
+name: pt18-led-matrix-module
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    board_root: .

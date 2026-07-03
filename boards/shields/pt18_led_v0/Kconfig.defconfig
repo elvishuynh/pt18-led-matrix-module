@@ -1,0 +1,12 @@
+if SHIELD_PT18_LED_V0
+
+config TM1640
+	default y
+
+config PT18_MATRIX
+	default y
+
+config PT18_MATRIX_TEXT
+	default y
+
+endif

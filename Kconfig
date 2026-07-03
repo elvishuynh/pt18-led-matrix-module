@@ -1,0 +1,12 @@
+config PT18_MATRIX
+	bool "PT18 LED Matrix Middleware"
+	default n
+	depends on TM1640
+	help
+	  Enable the PT18 LED V0 matrix middleware library. Provides a
+	  17-column logical framebuffer and handles the hardware-specific
+	  mapping to the TM1640 16-grid physical layout.
+
+if PT18_MATRIX
+rsource "lib/pt18_matrix/Kconfig"
+endif

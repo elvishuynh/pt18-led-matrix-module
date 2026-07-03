@@ -1,0 +1,2 @@
+config SHIELD_PT18_LED_V0
+	def_bool $(shields_list_contains,pt18_led_v0)

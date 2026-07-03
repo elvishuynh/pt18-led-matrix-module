@@ -1,0 +1,7 @@
+config PT18_MATRIX_TEXT
+	bool "PT18 Matrix text rendering support"
+	default y
+	depends on PT18_MATRIX
+	help
+	  Enable 5x7 font text rendering for the PT18 LED V0 matrix.
+	  Provides pt18_matrix_print() for scrolling ASCII text.

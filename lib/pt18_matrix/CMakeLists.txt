@@ -1,0 +1,3 @@
+zephyr_library()
+zephyr_library_sources(pt18_matrix.c)
+zephyr_library_sources_ifdef(CONFIG_PT18_MATRIX_TEXT pt18_matrix_text.c)
