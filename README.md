@@ -2,6 +2,15 @@
 
 Zephyr RTOS middleware for the **PT18 LED V0** board. This library gives you a 17-column × 7-row logical framebuffer on top of the [TM1640](https://github.com/elvishuynh/zephyr-tm1640-driver) 16-grid physical LED controller.
 
+### What is the PT18 LED V0?
+
+It's a custom LED matrix daughterboard found in the Subminimal Subscale. It is driven by a Titan Micro TM1640 LED controller and is responsible for the scale's wow factor.
+
+I developed this module firmware to hijack my scale. The stock Subminimal firmware forces a 4-5 second brand logo animation every time the device is powered on, which cannot be skipped. [This is so annoying that I'm bypassing the MCU that came with the Subscale and running my own open source firmware on an nRF54L15.](https://github.com/elvishuynh/SnailScale)
+
+WARNING for those looking to replicate this:
+Do not rely on wire colors. At least in my revision, the factory wiring does not follow normal convention. (Black is SCLK, Yellow is DIN, Blue is GND, and Red is VDD).
+
 ## Hardware Mapping
 
 The PT18 LED V0 has a 17x7 logical layout, but the TM1640 IC only supports up to 16 grids × 8 segments. To make the 17th column fit, the hardware uses a pretty interesting wiring scheme.
