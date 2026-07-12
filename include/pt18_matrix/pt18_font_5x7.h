@@ -13,10 +13,12 @@ extern "C" {
 #define PT18_FONT_CHAR_SPACING 1
 #define PT18_FONT_STRIDE       (PT18_FONT_WIDTH + PT18_FONT_CHAR_SPACING)
 
+#define PT18_FONT_DOT_OVERLAY_BIT  0x40  /* bit 6 bottom row for decimal overlay */
+
 #define PT18_FONT_FIRST_CHAR   0x20
 #define PT18_FONT_LAST_CHAR    0x7E
 
-/* Index with ch - PT18_FONT_FIRST_CHAR. 5 column bytes each */
+/* Index with ch - PT18_FONT_FIRST_CHAR. 5 column bytes ea. */
 static const uint8_t pt18_font_data[][PT18_FONT_WIDTH] = {
 	/* 0x20 ' ' */ {0x00, 0x00, 0x00, 0x00, 0x00},
 	/* 0x21 '!' */ {0x00, 0x00, 0x5F, 0x00, 0x00},
@@ -113,6 +115,25 @@ static const uint8_t pt18_font_data[][PT18_FONT_WIDTH] = {
 	/* 0x7C '|' */ {0x00, 0x00, 0x7F, 0x00, 0x00},
 	/* 0x7D '}' */ {0x00, 0x41, 0x36, 0x08, 0x00},
 	/* 0x7E '~' */ {0x10, 0x08, 0x08, 0x10, 0x10},
+};
+
+/* trimmed widths for proportional rendering
+ * digits and minus forced to 5 for monospaced numeric readout
+ * decimal is 0 for zero width overlay onto previous spacing gap
+ */
+static const uint8_t pt18_font_widths[] = {
+/*       ' '  !   "   #   $   %   &   '   (   )   *   +   ,   -   .   / */
+          3,  1,  3,  5,  5,  5,  5,  2,  3,  3,  5,  5,  2,  5,  0,  5,
+/*        0   1   2   3   4   5   6   7   8   9   :   ;   <   =   >   ? */
+          5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  1,  2,  4,  5,  4,  5,
+/*        @   A   B   C   D   E   F   G   H   I   J   K   L   M   N   O */
+          5,  5,  5,  5,  5,  5,  5,  5,  5,  3,  5,  5,  5,  5,  5,  5,
+/*        P   Q   R   S   T   U   V   W   X   Y   Z   [   \   ]   ^   _ */
+          5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  3,  5,  3,  5,  5,
+/*        `   a   b   c   d   e   f   g   h   i   j   k   l   m   n   o */
+          3,  5,  5,  5,  5,  5,  5,  5,  5,  3,  4,  4,  3,  5,  5,  5,
+/*        p   q   r   s   t   u   v   w   x   y   z   {   |   }   ~     */
+          5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  3,  1,  3,  5,
 };
 
 #ifdef __cplusplus

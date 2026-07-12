@@ -1,81 +1,115 @@
-/* The PT18 uses 16 grids for columns 0-15 skipping logical column 5
- * stitches logical column 5 the 17th column across the unused bit-7
+/* PT18 uses 16 grids for columns 0-15 skipping logical column 5
+ * stitches logical column 5 the 17th column across the unused bit 7
  * positions of grids 8-15
  */
 
-#include <zephyr/device.h>
-#include <zephyr/logging/log.h>
+#include <errno.h>
 #include <string.h>
+
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 
 #include <tm1640/tm1640.h>
 #include <pt18_matrix/pt18_matrix.h>
 
 LOG_MODULE_REGISTER(pt18_matrix, CONFIG_LOG_DEFAULT_LEVEL);
 
+/* bit masks for logical to physical column mapping */
+#define PT18_SPECIAL_ROW_BIT    0x80  /* bit 7 row -1 indicator */
+#define PT18_STANDARD_ROW_MASK  0x7F  /* bits 0-6 standard 7 rows */
+
+/* individual row bit positions for flip */
+#define PT18_ROW_1_BIT  0x01
+#define PT18_ROW_2_BIT  0x02
+#define PT18_ROW_3_BIT  0x04
+#define PT18_ROW_4_BIT  0x08
+#define PT18_ROW_5_BIT  0x10
+#define PT18_ROW_6_BIT  0x20
+#define PT18_ROW_7_BIT  0x40
+
+/* physical grid layout */
+#define PT18_SPLIT_COL            5   /* logical col scattered across bit 7 */
+#define PT18_SPLIT_GRID_START     8
+#define PT18_SPLIT_GRID_END      15
+#define PT18_SPECIAL_ROW_COL_A   11   /* logical col whose bit 7 maps to grid 5 */
+#define PT18_SPECIAL_ROW_GRID_A   5
+
+static K_MUTEX_DEFINE(pt18_mutex);
+
 /*
- * mirrors the standard 7 rows bits 0-6 to fix the font orientation
- * preserves the special Row -1 LED bit 7
+ * mirrors the standard 7 row bits 0-6 to fix font orientation
+ * preserves the special row -1 LED on bit 7
  */
 static uint8_t flip_logical_rows(uint8_t col_data)
 {
 	uint8_t flipped = 0;
-	if (col_data & 0x01) flipped |= 0x40; /* Font Top > Hardware Top Row 7 */
-	if (col_data & 0x02) flipped |= 0x20;
-	if (col_data & 0x04) flipped |= 0x10;
-	if (col_data & 0x08) flipped |= 0x08; /* Center stays center */
-	if (col_data & 0x10) flipped |= 0x04;
-	if (col_data & 0x20) flipped |= 0x02;
-	if (col_data & 0x40) flipped |= 0x01; /* Font Bottom > Hardware Bottom Row 1 */
 
-	/* Preserve the special bit 7 Row -1 */
-	flipped |= (col_data & 0x80);
+	if (col_data & PT18_ROW_1_BIT) flipped |= PT18_ROW_7_BIT;
+	if (col_data & PT18_ROW_2_BIT) flipped |= PT18_ROW_6_BIT;
+	if (col_data & PT18_ROW_3_BIT) flipped |= PT18_ROW_5_BIT;
+	if (col_data & PT18_ROW_4_BIT) flipped |= PT18_ROW_4_BIT; /* center stays */
+	if (col_data & PT18_ROW_5_BIT) flipped |= PT18_ROW_3_BIT;
+	if (col_data & PT18_ROW_6_BIT) flipped |= PT18_ROW_2_BIT;
+	if (col_data & PT18_ROW_7_BIT) flipped |= PT18_ROW_1_BIT;
+
+	flipped |= (col_data & PT18_SPECIAL_ROW_BIT); /* preserve row -1 */
 
 	return flipped;
 }
 
 /*
- * Maps 17 logical columns to 16 physical grids for the PT18 LED V0 board
- * Columns 0-4   > Grids 15-11 reversed,bits 0-6 only
- * Columns 6-16  > Grids 10-0  reversed, bits 0-6 only
- * Column 5      > Scattered across bit 7 of Grids 8-15
- * Column 11 bit 7 > Grid 5 bit 7
+ * maps 17 logical columns to 16 physical grids for PT18 LED V0
+ * cols 0-4   > grids 15-11 reversed bits 0-6
+ * cols 6-16  > grids 10-0 reversed bits 0-6
+ * col 5      > scattered across bit 7 of grids 8-15
+ * col 11 bit 7 > grid 5 bit 7
  */
 static void pt18_map_logical_to_physical(const uint8_t *logical, uint8_t *physical)
 {
 	memset(physical, 0, TM1640_NUM_GRIDS);
 
-	/* Create a row flipped version of the logical buffer */
-	uint8_t flipped_logical[PT18_MATRIX_COLUMNS];
+	uint8_t flipped[PT18_MATRIX_COLUMNS];
 	for (int i = 0; i < PT18_MATRIX_COLUMNS; i++) {
-		flipped_logical[i] = flip_logical_rows(logical[i]);
+		flipped[i] = flip_logical_rows(logical[i]);
 	}
 
+	/* standard columns map to grids in reverse order */
 	for (int i = 0; i < PT18_MATRIX_COLUMNS; i++) {
-		if (i < 5) {
-			physical[15 - i] = flipped_logical[i] & 0x7F;
-		} else if (i > 5) {
-			physical[16 - i] = flipped_logical[i] & 0x7F;
+		if (i < PT18_SPLIT_COL) {
+			physical[PT18_SPLIT_GRID_END - i] =
+				flipped[i] & PT18_STANDARD_ROW_MASK;
+		} else if (i > PT18_SPLIT_COL) {
+			physical[TM1640_NUM_GRIDS - i] =
+				flipped[i] & PT18_STANDARD_ROW_MASK;
 		}
 	}
 
-	/* Col 12 logical[11] Row -1 bit 7 */
-	if (flipped_logical[11] & 0x80) {
-		physical[5] |= 0x80;
+	/* col 12 row -1 maps to grid 5 bit 7 */
+	if (flipped[PT18_SPECIAL_ROW_COL_A] & PT18_SPECIAL_ROW_BIT) {
+		physical[PT18_SPECIAL_ROW_GRID_A] |= PT18_SPECIAL_ROW_BIT;
 	}
 
-	/* Col 6 logical[5] mapping to grid 0x08-0x0F */
-	/* Because we flipped the bits above font Top (0x40) routes to physical[15] (Row 7) */
-	if (flipped_logical[5] & 0x80) physical[8]  |= 0x80;  /* Row -1 */
-	if (flipped_logical[5] & 0x01) physical[9]  |= 0x80;  /* Row 1 (Bottom) */
-	if (flipped_logical[5] & 0x02) physical[10] |= 0x80;  /* Row 2 */
-	if (flipped_logical[5] & 0x04) physical[11] |= 0x80;  /* Row 3 */
-	if (flipped_logical[5] & 0x08) physical[12] |= 0x80;  /* Row 4 */
-	if (flipped_logical[5] & 0x10) physical[13] |= 0x80;  /* Row 5 */
-	if (flipped_logical[5] & 0x20) physical[14] |= 0x80;  /* Row 6 */
-	if (flipped_logical[5] & 0x40) physical[15] |= 0x80;  /* Row 7 (Top) */
+	/* col 6 scattered across bit 7 of grids 8-15 */
+	if (flipped[PT18_SPLIT_COL] & PT18_SPECIAL_ROW_BIT)
+		physical[PT18_SPLIT_GRID_START]     |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_1_BIT)
+		physical[PT18_SPLIT_GRID_START + 1] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_2_BIT)
+		physical[PT18_SPLIT_GRID_START + 2] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_3_BIT)
+		physical[PT18_SPLIT_GRID_START + 3] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_4_BIT)
+		physical[PT18_SPLIT_GRID_START + 4] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_5_BIT)
+		physical[PT18_SPLIT_GRID_START + 5] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_6_BIT)
+		physical[PT18_SPLIT_GRID_START + 6] |= PT18_SPECIAL_ROW_BIT;
+	if (flipped[PT18_SPLIT_COL] & PT18_ROW_7_BIT)
+		physical[PT18_SPLIT_GRID_START + 7] |= PT18_SPECIAL_ROW_BIT;
 }
 
-/* API */
+/* public API */
 
 int pt18_matrix_init(const struct device *dev)
 {
@@ -85,15 +119,21 @@ int pt18_matrix_init(const struct device *dev)
 		return -EINVAL;
 	}
 
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+
 	ret = tm1640_clear(dev);
 	if (ret < 0) {
+		k_mutex_unlock(&pt18_mutex);
 		return ret;
 	}
 
 	ret = tm1640_display_on(dev);
 	if (ret < 0) {
+		k_mutex_unlock(&pt18_mutex);
 		return ret;
 	}
+
+	k_mutex_unlock(&pt18_mutex);
 
 	LOG_INF("PT18 matrix initialized");
 	return 0;
@@ -102,35 +142,52 @@ int pt18_matrix_init(const struct device *dev)
 int pt18_matrix_write(const struct device *dev, const uint8_t *buf, size_t len)
 {
 	uint8_t physical[TM1640_NUM_GRIDS];
+	int ret;
 
 	if (dev == NULL || buf == NULL) {
 		return -EINVAL;
 	}
 
-	/* Pad to full 17 columns if caller provides fewer */
+	/* pad to full 17 columns if caller provides fewer */
 	uint8_t logical[PT18_MATRIX_COLUMNS] = {0};
 	size_t copy_len = (len > PT18_MATRIX_COLUMNS) ? PT18_MATRIX_COLUMNS : len;
 	memcpy(logical, buf, copy_len);
 
 	pt18_map_logical_to_physical(logical, physical);
 
-	return tm1640_write(dev, physical, TM1640_NUM_GRIDS);
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+	ret = tm1640_write(dev, physical, TM1640_NUM_GRIDS);
+	k_mutex_unlock(&pt18_mutex);
+
+	return ret;
 }
 
 int pt18_matrix_clear(const struct device *dev)
 {
+	int ret;
+
 	if (dev == NULL) {
 		return -EINVAL;
 	}
 
-	return tm1640_clear(dev);
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+	ret = tm1640_clear(dev);
+	k_mutex_unlock(&pt18_mutex);
+
+	return ret;
 }
 
 int pt18_matrix_set_brightness(const struct device *dev, uint8_t level)
 {
+	int ret;
+
 	if (dev == NULL) {
 		return -EINVAL;
 	}
 
-	return tm1640_set_brightness(dev, level);
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+	ret = tm1640_set_brightness(dev, level);
+	k_mutex_unlock(&pt18_mutex);
+
+	return ret;
 }
