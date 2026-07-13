@@ -37,9 +37,9 @@ Logical Col 5 Bit 5 (Row 6)  → Grid 14 bit 7
 Logical Col 5 Bit 6 (Row 7)  → Grid 15 bit 7
 ```
 
-### Special Row -1
+### Special Row -1 (Dedicated Decimal Points)
 
-Logical columns 6 and 12 each have an extra "Row -1" indicator LED wired to bit 7. Column 12's bit 7 specifically maps to Grid 5 bit 7.
+Logical columns 5 and 11 each have an extra "Row -1" indicator LED wired to bit 7. These LEDs fall perfectly within the inter-character kerning gaps and serve as dedicated physical decimal points. Column 11's bit 7 specifically maps to Grid 5 bit 7.
 
 ## Dependencies
 
@@ -89,7 +89,7 @@ Everything in the public API is thread safe. A `k_mutex` protects the TM1640 har
 Text rendering uses a compile time width lookup table (`pt18_font_widths[]`) so cursor advancement is O(1) per character.
 
 * **Monospaced numerics:** Digits `0`–`9` and the minus sign `-` are forced to a width of 5. This stops numeric readouts from jittering when values update.
-* **Zero-width decimals:** The decimal point `.` is treated as width 0. Instead of taking up its own column, it gets overlaid onto bit 6 (the bottom row) of the kerning gap left by the previous character. This keeps decimal numbers looking compact. *(Edge case: If a string starts with a decimal, like `".5"`, it draws at column 0 and advances the cursor by 2.)*
+* **Zero-width decimals:** The decimal point `.` is treated as width 0. Instead of taking up its own column, it seamlessly illuminates the dedicated physical hardware decimal LED (Row -1) located in the kerning gap left by the previous character. This keeps decimal numbers looking compact. *(Edge case: If a string starts with a decimal, like `".5"`, it falls back to standard grid pixels drawn at column 0 and advances the cursor by 2.)*
 
 ## Usage
 
