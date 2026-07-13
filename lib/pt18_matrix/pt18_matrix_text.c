@@ -62,12 +62,14 @@ int pt18_matrix_print(const struct device *dev, const char *str, int offset)
 			break;
 		}
 
-		/* find first non-zero column for left trim */
+		/* find first non zero column for left trim */
 		int start = 0;
-		for (int j = 0; j < PT18_FONT_WIDTH; j++) {
-			if (glyph[j] != 0x00) {
-				start = j;
-				break;
+		if (width < PT18_FONT_WIDTH) {
+			for (int j = 0; j < PT18_FONT_WIDTH; j++) {
+				if (glyph[j] != 0x00) {
+					start = j;
+					break;
+				}
 			}
 		}
 
@@ -77,7 +79,7 @@ int pt18_matrix_print(const struct device *dev, const char *str, int offset)
 			continue;
 		}
 
-		/* blit trimmed glyph columns */
+		/* copy glyph pixels to screen */
 		for (int j = 0; j < (int)width; j++) {
 			int col = cursor + j;
 			if (col < 0) {
@@ -86,7 +88,11 @@ int pt18_matrix_print(const struct device *dev, const char *str, int offset)
 			if (col >= PT18_MATRIX_COLUMNS) {
 				break;
 			}
-			logical[col] = glyph[start + j];
+			if (start + j < PT18_FONT_WIDTH) {
+				logical[col] = glyph[start + j];
+			} else {
+				logical[col] = 0x00;
+			}
 		}
 
 		cursor += width + PT18_FONT_CHAR_SPACING;
