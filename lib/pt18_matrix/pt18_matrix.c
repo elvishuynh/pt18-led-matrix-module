@@ -16,7 +16,6 @@
 LOG_MODULE_REGISTER(pt18_matrix, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* bit masks for logical to physical column mapping */
-#define PT18_SPECIAL_ROW_BIT    0x80  /* bit 7 row -1 indicator */
 #define PT18_STANDARD_ROW_MASK  0x7F  /* bits 0-6 standard 7 rows */
 
 /* individual row bit positions for flip */

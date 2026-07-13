@@ -13,8 +13,6 @@ extern "C" {
 #define PT18_FONT_CHAR_SPACING 1
 #define PT18_FONT_STRIDE       (PT18_FONT_WIDTH + PT18_FONT_CHAR_SPACING)
 
-#define PT18_FONT_DOT_OVERLAY_BIT  0x40  /* bit 6 bottom row for decimal overlay */
-
 #define PT18_FONT_FIRST_CHAR   0x20
 #define PT18_FONT_LAST_CHAR    0x7E
 

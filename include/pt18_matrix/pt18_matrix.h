@@ -14,6 +14,7 @@ extern "C" {
 /* PT18 LED V0 logical display dimensions */
 #define PT18_MATRIX_COLUMNS  17
 #define PT18_MATRIX_ROWS     7
+#define PT18_SPECIAL_ROW_BIT 0x80
 
 /*
  * Initialize

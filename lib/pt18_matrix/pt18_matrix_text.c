@@ -39,17 +39,18 @@ int pt18_matrix_print(const struct device *dev, const char *str, int offset)
 			width = pt18_font_widths[idx];
 		}
 
-		/* zero-width decimal point overlay */
-		if (width == 0) {
+		/* hardware decimal point logic */
+		if (ch == '.') {
 			if (cursor == 0) {
-				/* leading decimal eg ".5" gets its own column */
-				logical[0] |= PT18_FONT_DOT_OVERLAY_BIT;
+				/* leading decimal gets standard grid pixels */
+				uint8_t idx = ch - PT18_FONT_FIRST_CHAR;
+				logical[0] = pt18_font_data[idx][2];
 				cursor += 2;
 			} else if (cursor > 0) {
-				/* overlay dot onto previous chars spacing gap */
+				/* hardware LED overlay onto previous chars spacing gap */
 				int dot_col = cursor - 1;
 				if (dot_col < PT18_MATRIX_COLUMNS) {
-					logical[dot_col] |= PT18_FONT_DOT_OVERLAY_BIT;
+					logical[dot_col] |= PT18_SPECIAL_ROW_BIT;
 				}
 			}
 			/* cursor < 0 means dot is off screen so skip */
