@@ -38,6 +38,18 @@ int pt18_matrix_clear(void);
  */
 int pt18_matrix_set_brightness(uint8_t level);
 
+/*
+ * Power off display
+ * Clears display and turns off brightness
+ */
+int pt18_matrix_power_off(void);
+
+/*
+ * Power on display
+ * Turns on display at current brightness level
+ */
+int pt18_matrix_power_on(void);
+
 #ifdef __cplusplus
 }
 #endif

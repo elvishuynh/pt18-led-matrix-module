@@ -201,3 +201,33 @@ int pt18_matrix_set_brightness(uint8_t level)
 
 	return ret;
 }
+
+int pt18_matrix_power_off(void)
+{
+	int ret;
+
+	if (tm_dev == NULL) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+	ret = tm1640_display_off(tm_dev);
+	k_mutex_unlock(&pt18_mutex);
+
+	return ret;
+}
+
+int pt18_matrix_power_on(void)
+{
+	int ret;
+
+	if (tm_dev == NULL) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&pt18_mutex, K_FOREVER);
+	ret = tm1640_display_on(tm_dev);
+	k_mutex_unlock(&pt18_mutex);
+
+	return ret;
+}
