@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-int pt18_matrix_print(const struct device *dev, const char *str, int offset);
+int pt18_matrix_print(const char *str, int offset);
 
 #ifdef __cplusplus
 }

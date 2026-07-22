@@ -12,12 +12,12 @@
 
 LOG_MODULE_REGISTER(pt18_matrix_text, CONFIG_LOG_DEFAULT_LEVEL);
 
-int pt18_matrix_print(const struct device *dev, const char *str, int offset)
+int pt18_matrix_print(const char *str, int offset)
 {
 	uint8_t logical[PT18_MATRIX_COLUMNS] = {0};
 	int cursor = offset;
 
-	if (dev == NULL || str == NULL) {
+	if (str == NULL) {
 		return -EINVAL;
 	}
 
@@ -100,5 +100,5 @@ int pt18_matrix_print(const struct device *dev, const char *str, int offset)
 
 	LOG_DBG("print \"%s\" offset=%d", str, offset);
 
-	return pt18_matrix_write(dev, logical, PT18_MATRIX_COLUMNS);
+	return pt18_matrix_write(logical, PT18_MATRIX_COLUMNS);
 }

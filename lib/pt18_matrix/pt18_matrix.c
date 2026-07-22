@@ -35,6 +35,7 @@ LOG_MODULE_REGISTER(pt18_matrix, CONFIG_LOG_DEFAULT_LEVEL);
 #define PT18_SPECIAL_ROW_GRID_A   5
 
 static K_MUTEX_DEFINE(pt18_mutex);
+static const struct device *tm_dev;
 
 /*
  * mirrors the standard 7 row bits 0-6 to fix font orientation
@@ -110,23 +111,33 @@ static void pt18_map_logical_to_physical(const uint8_t *logical, uint8_t *physic
 
 /* public API */
 
-int pt18_matrix_init(const struct device *dev)
+int pt18_matrix_init(void)
 {
 	int ret;
+	const struct device *dev = DEVICE_DT_GET(DT_NODELABEL(tm1640));
 
-	if (dev == NULL) {
-		return -EINVAL;
+	if (!device_is_ready(dev)) {
+		LOG_ERR("TM1640 device not ready");
+		return -ENODEV;
 	}
+
+	tm_dev = dev;
 
 	k_mutex_lock(&pt18_mutex, K_FOREVER);
 
-	ret = tm1640_clear(dev);
+	ret = tm1640_clear(tm_dev);
 	if (ret < 0) {
 		k_mutex_unlock(&pt18_mutex);
 		return ret;
 	}
 
-	ret = tm1640_display_on(dev);
+	ret = tm1640_display_on(tm_dev);
+	if (ret < 0) {
+		k_mutex_unlock(&pt18_mutex);
+		return ret;
+	}
+
+	ret = tm1640_set_brightness(tm_dev, 1);
 	if (ret < 0) {
 		k_mutex_unlock(&pt18_mutex);
 		return ret;
@@ -138,12 +149,12 @@ int pt18_matrix_init(const struct device *dev)
 	return 0;
 }
 
-int pt18_matrix_write(const struct device *dev, const uint8_t *buf, size_t len)
+int pt18_matrix_write(const uint8_t *buf, size_t len)
 {
 	uint8_t physical[TM1640_NUM_GRIDS];
 	int ret;
 
-	if (dev == NULL || buf == NULL) {
+	if (tm_dev == NULL || buf == NULL) {
 		return -EINVAL;
 	}
 
@@ -155,37 +166,37 @@ int pt18_matrix_write(const struct device *dev, const uint8_t *buf, size_t len)
 	pt18_map_logical_to_physical(logical, physical);
 
 	k_mutex_lock(&pt18_mutex, K_FOREVER);
-	ret = tm1640_write(dev, physical, TM1640_NUM_GRIDS);
+	ret = tm1640_write(tm_dev, physical, TM1640_NUM_GRIDS);
 	k_mutex_unlock(&pt18_mutex);
 
 	return ret;
 }
 
-int pt18_matrix_clear(const struct device *dev)
+int pt18_matrix_clear(void)
 {
 	int ret;
 
-	if (dev == NULL) {
+	if (tm_dev == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&pt18_mutex, K_FOREVER);
-	ret = tm1640_clear(dev);
+	ret = tm1640_clear(tm_dev);
 	k_mutex_unlock(&pt18_mutex);
 
 	return ret;
 }
 
-int pt18_matrix_set_brightness(const struct device *dev, uint8_t level)
+int pt18_matrix_set_brightness(uint8_t level)
 {
 	int ret;
 
-	if (dev == NULL) {
+	if (tm_dev == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&pt18_mutex, K_FOREVER);
-	ret = tm1640_set_brightness(dev, level);
+	ret = tm1640_set_brightness(tm_dev, level);
 	k_mutex_unlock(&pt18_mutex);
 
 	return ret;

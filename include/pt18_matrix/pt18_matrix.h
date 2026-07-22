@@ -20,23 +20,23 @@ extern "C" {
  * Initialize
  * Clears display and turn it on at full brightness
  */
-int pt18_matrix_init(const struct device *dev);
+int pt18_matrix_init(void);
 
 /*
  * Each byte represents one columnn. bits 0-6 map to rows 1-7.
  * bit 7 is the Row -1 in my notes indicator LED
  */
-int pt18_matrix_write(const struct device *dev, const uint8_t *buf, size_t len);
+int pt18_matrix_write(const uint8_t *buf, size_t len);
 
 /*
  * Clear display
  */
-int pt18_matrix_clear(const struct device *dev);
+int pt18_matrix_clear(void);
 
 /*
  * Set display brightness 0-7
  */
-int pt18_matrix_set_brightness(const struct device *dev, uint8_t level);
+int pt18_matrix_set_brightness(uint8_t level);
 
 #ifdef __cplusplus
 }
